@@ -1,0 +1,253 @@
+from django.shortcuts import render, redirect
+from . import views
+from django.contrib import messages
+import pickle
+from django.contrib.auth.models import User
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import tensorflow as ti
+from matplotlib import pyplot as plt
+from keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.models import load_model 
+import io
+import os, glob
+from sklearn.metrics import confusion_matrix
+from keras.layers import Dense, Dropout, Flatten, Conv2D,Convolution2D, MaxPool2D, BatchNormalization, GlobalAveragePooling2D,Activation
+from tensorflow.keras.optimizers import Adam
+from .models import marine
+classes=['Clams', 'Corals', 'Crabs', 'Dolphin', 'Eel', 'Fish', 'Jelly Fish', 'Lobster', 'Nudibranchs', 'Octopus', 'Otter', 'Penguin', 'Puffers', 'Sea Rays', 'Sea Urchins', 'Seahorse', 'Seal', 'Sharks', 'Shrimp', 'Squid', 'Starfish', 'Turtle_Tortoise', 'Whale']
+
+
+
+def index(request):
+    return render(request,'index.html')
+
+def about(request):
+    return render(request,'about.html')
+
+def upload(request):
+    return render(request,'upload.html')
+
+def services(request):
+    return render(request,'services.html')
+
+def Register(request):
+    if request.method=='POST':
+        Name = request.POST['username']
+        email=request.POST['email1']
+        password=request.POST['password']
+        conpassword=request.POST['cpassword']
+        contact=request.POST['contact']
+        print(Name,email,password,conpassword,contact)
+        if password==conpassword:
+            dc = User.objects.filter(email=email,password=password)
+            if dc:
+                msg='Account already exists'
+                return render(request,'Registration.html',{'msg':msg})
+            else:
+                user=User(username=Name,email=email,password=password)
+                user.save()
+                return render(request,'login.html')
+                
+        else:
+            msg='passwords not matched '
+            return render(request,'Register.html',{'msg':msg})
+    return render(request,'Register.html')
+
+def Login(request):
+    if request.method=='POST':
+        lemail=request.POST['email']
+        lpassword=request.POST['password']
+
+        d=User.objects.filter(email=lemail,password=lpassword).exists()
+        if d:
+
+            return redirect('upload')
+        else:
+            msg='login failed'
+            return render(request,'Login.html',{'msg':msg})
+
+    return render(request,'Login.html')
+
+def user(request):
+    
+    return render(request,'user.html')
+
+
+
+def Result(request):
+   if request.method=='POST':
+        m1=int(request.POST['alg'])
+        file=request.FILES['images']
+        fn=marine(image=file)
+        fn.save()
+        path='animals/static/images/'+ fn.filename()
+        if m1==1:
+            model=load_model('ResNet50.h5')
+            x1=image.load_img(path,target_size=(224,224))
+            x1=image.img_to_array(x1)
+            x1/=255
+                                
+
+        if m1==2:
+            model=load_model('Mobilenet.h5')
+            x1=image.load_img(path,target_size=(224,224))
+            x1=image.img_to_array(x1)
+            x1/=255
+            
+                 
+        x1=np.expand_dims(x1,axis=0)      
+        result=model.predict(x1)
+        print(result)
+        b1=np.argmax(result)
+        results=classes[b1]    
+        path='/static/Images/'+file.name
+
+        result=model.predict(x1)
+        b1=np.argmax(result)
+        result=classes[b1]    
+        if results=='Clams':
+            msg='''Animal name:Clams,
+                   Scientific name:Hippocampus,
+                   Benifits: treat Kidneys and respiratory diseases,
+                   Lives in:shallow tropical and temperate salt water throughout the world, from about 45°S to 45°N. They live in sheltered areas such as seagrass beds, estuaries, coral reefs, and mangroves. Four species are found in Pacific waters from North America to South America
+                   Special about it: swim vertically, lack pelvic fins, have bony plates over their bodies, and move their eyeballs independently.'''
+
+        elif results=='Corals':
+            msg=''' Animal name:Corals.
+                    Scientific name:Anthozoa.
+                    Benifits:help improve blood circulation and reduce inflammation, which can help alleviate pain and promote healing.
+                    Lives in: throughout the world's oceans, in both shallow and deep water.
+                    Special about it:sea animals that stay in one place throughout their adult lives.'''
+        elif results=='Crabs':
+            msg='''Animal name:Crabs.
+                   Scientific name:Brachyura.
+                   Benifits:The omega-3 fatty acids in crab provide many benefits related to heart health.
+                   Lives in:all oceans and in fresh water. Some crabs live on land.
+                   Special about it:Crabs walk and swim sideways.Crabs eat both meat and plants, making them omnivores.'''
+        elif results=='Dolphin':
+            msg='''Animal name:Dolphin
+                   Scientific name:Delphinus
+                   Benifits:keeping their environment in balance.
+                   Lives in:the ocean or brackish waters along coastlines.
+                   Special about it:grace, intelligence, playfulness, and friendliness to humans.'''
+        elif results=='Eel':
+            msg='''Animal name:Eel
+                   Scientific name:Anguilliformes
+                   Benifits:replenish damage, reduce leprosy, strengthen tendons and bones
+                   Lives in:both freshwater and saltwater, with the majority of species found at sea.
+                   Special about it:Eels are characterized by their elongated, wormlike bodies.'''
+        elif results=='Fish':
+            msg='''Animal name:Fish
+                   Scientific name:Vertebrata (subphylum)
+                   Benifits:Fish is a low-fat high quality protein. Fish is filled with omega-3 fatty acids and vitamins such as D and B2 (riboflavin). Fish is rich in calcium and phosphorus and a great source of minerals, such as iron, zinc, iodine, magnesium, and potassium.
+                   Lives in:Fishes live in virtually all aquatic habitats. Different species of fish are adapted for different habitats: rocky shores, coral reefs, kelp forests, rivers and streams, lakes and ponds, under sea ice, the deep sea, and other environments of fresh, salt, and brackish water.
+                   Special about it:Because water transmits sounds, disperses chemicals, and conducts electricity better than air, fish rely less on their vision and more on their hearing, taste, and smell.'''
+        elif results=='Jelly Fish':
+            msg='''Animal name:Jelly Fish
+                   Scientific name:Aurelia aurita
+                   Benifits:Certain species of jellyfish are not only safe to eat but also a good source of several nutrients, including protein, antioxidants, and minerals like selenium and choline.
+                   Lives in:oceans all over the world.
+                   Special about it:Jellyfish have no brain, heart, bones or eyes'''
+        elif results=='Lobster':
+            msg='''Animal name:Lobster
+                   Scientific name:Nephropidae
+                   Benifits:a great source of selenium and also contain omega-3 fatty acids.
+                   Lives in:the bottom of the ocean
+                   Special about it:Lobsters have teeth in their stomachs.'''
+        elif results=='Nudibranchs':
+            msg='''Animal name:Nudibranchs
+                   Scientific name:Nudibranchia
+                   Benifits:take up oxygen from surrounding water directly through their skin. 
+                   Lives in:most areas of the sea from the intertidal zone to the deep ocean, from the tropics to the poles
+                   Special about it:derive their coloring from the food they eat, which helps in camouflage, and some even retain the foul-tasting poisons of their prey and secrete them as a defense against predators.'''
+        elif results=='Octopus':
+            msg='''Animal name:Octopus
+                   Scientific name:Octopoda
+                   Benifits:Octopus is an excellent source of omega-3 fatty acids, "good fats" linked to a range of heart-healthy benefits. Omega-3s can lower your blood pressure and slow the buildup of plaque in your arteries, reducing stress on the heart.
+                   Lives in:Octopuses live in coastal marine waters and spend much of their time in dens—small holes and crevices in rocks and coral.
+                   Special about it:eight arms and bulbous heads.'''
+        elif results=='Otter':
+            msg='''Animal name:Otter
+                   Scientific name:Lutrinae
+                   Benifits: top predators using both terrestrial and aquatic environments
+                   Lives in: both marine and fresh water: streams, rivers, lakes, ponds and marshes.
+                   Special about it:lack a blubber layer. Instead, they depend on their dense, water-resistant fur to provide insulation.'''
+        elif results=='Penguin':
+            msg='''Animal name:Penguin
+                   Scientific name:Spheniscidae
+                   Benifits: however; they also play important roles in ecosystems both in the ocean and on land.
+                   Lives in:Penguins are only found in the Southern Hemisphere. The greatest concentrations are on Antarctic coasts and sub-Antarctic islands.
+                   Special about it: flightless birds with flippers instead of wings'''
+        elif results=='Puffers':
+            msg='''Animal name:Puffers
+                   Scientific name:Tetraodontidae
+                   Benifits: to prevent asthma symptoms.
+                   Lives in:Most puffers are found in tropical and subtropical ocean waters
+                   Special about it:Pufferfish can inflate into a ball shape to evade predators'''
+        elif results=='Sea Rays':
+            msg='''Animal name:Sea Rays
+                   Scientific name:Dasyatidae
+                   Benifits:Some western Pacific cultures value these animals as a source of protein
+                   Lives in:Rays are predominantly marine and are found in all oceans.
+                   Special about it: a flattened, disklike body, with the five gill openings and the mouth generally located on the underside.'''
+        elif results=='Sea Urchins':
+            msg='''Animal name:Sea Urchins.
+                   Scientific name:Echinoidea.
+                   Benifits: rich in protein and dietary fiber, minerals (such as zinc) and Beta Carotene,
+                   Lives in:every ocean in the world. 
+                   Special about it:a hard outer shell made from calcium carbonate.'''
+        elif results=='Seahorse':
+            msg='''Animal name:Seahorse
+                   Scientific name:Hippocampus
+                   Benifits:It is believed that dried Sea Horse can treat Kidneys and respiratory diseases.
+                   Lives in: All seahorses are marine species. They are typically found in seagrass beds, mangrove roots, and coral reefs, in shallow temperate and tropical waters.
+                   Special about it:horselike head, prehensile tail, independently moving eyes, and brood pouch.'''
+        elif results=='Seal':
+            msg='''Animal name:Seal
+                   Scientific name:Pinnipedia
+                   Benifits:Seal oil can be used as a medicine for wounds or other infected areas.
+                   Lives in: along most coasts and cold waters, but a majority of them live in the Arctic and Antarctic waters.
+                   Special about it:Seals have very good vision in water.'''
+        elif results=='Sharks':
+            msg='''Animal name:Sharks
+                   Scientific name:Selachimorpha
+                   Benifits: Shark meat can be a good source of protein, omega-3 fatty acids, and other nutrients. In some cultures, it is also considered a delicacy.
+                   Lives in:Sharks live in most ocean habitats.
+                   Special about it:Sharks do not have bones.Sharks use their gills to filter oxygen from the water.'''
+        elif results=='Shrimp':
+            msg='''Animal name:Shrimp
+                   Scientific name:Caridea
+                   Benifits:These nutrients include vitamin B12, which helps form red blood cells and maintain nervous system function
+                   Lives in: near the seafloor of most coasts and estuaries, as well as in rivers and lakes.
+                   Special about it:a semitransparent body flattened from side to side and a flexible abdomen terminating in a fanlike tail.'''
+        elif results=='Squid':
+            msg='''Animal name:Squid
+                   Scientific name:Decapodiformes
+                   Benifits:Squid is a good source of vitamin B12 and B6
+                   Lives in:Squids are found in oceans all around the world.
+                   Special about it:elongated tubular bodies and short compact heads with eyes on the sides of the head.'''
+        elif results=='Starfish':
+            msg='''Animal name:Starfish
+                   Scientific name:Asteroidea
+                   Benifits: A starfish's outer body contains a non-stick material with the ability to treat inflammatory human diseases such as arthritis and hay fever.
+                   Lives in:Sea stars live in salt water and are found in all of the world's oceans, from warm, tropical waters to the cold seafloor.
+                   Special about it:Hard plates under their skin instead of a backbone.Hundreds of tube feet, which help feeding and movement.'''
+        elif results=='Turtle_Tortoise':
+            msg='''Animal name:Turtle_Tortoise
+                   Scientific name:Testudines
+                   Benifits:It is also a source of several micronutrients - including selenium, vitamin B12, iron, potassium, thiamine, riboflavin and zinc.
+                   Lives in:fresh water, like ponds and lakes.
+                   Special about it:They have sturdy, sprawling limbs with short feet or paddlelike flippers.'''
+        elif results=='Whale':
+            msg='''Animal name:Whale
+                   Scientific name:Cetacea
+                   Benifits:They were hunted to produce a variety of products such as lamp and cooking oil, soap, perfume, candles and cosmetics.
+                   Lives in:Whales live in every ocean on the planet.
+                   Special about it:Whale and dolphin brains contain specialized brain cells called spindle neurons.'''
+        path='static/images/'+ fn.filename()
+        return render(request,"Result.html",{"messag":results,"path":path,"message":msg})
+   return render (request,"Result.html")
+
